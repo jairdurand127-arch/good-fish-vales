@@ -1,6 +1,8 @@
 // Estado global
 let currentVoucher = null;
 let allVouchers = [];
+let html5QrCode = null;
+let isScanning = false;
 
 // Cargar vales del localStorage
 function loadVouchers() {
@@ -28,6 +30,11 @@ function generateCode() {
 
 // Mostrar vista
 function showView(viewName) {
+    // Detener escáner si está activo
+    if (isScanning && html5QrCode) {
+        stopScanner();
+    }
+    
     // Ocultar todas las vistas
     document.querySelectorAll('.card').forEach(card => {
         card.classList.add('hidden');
@@ -43,6 +50,154 @@ function showView(viewName) {
     if (viewName === 'list') {
         loadVouchersList();
     }
+    
+    if (viewName === 'verify') {
+        resetVerifyView();
+    }
+}
+
+// Resetear vista de verificación
+function resetVerifyView() {
+    document.getElementById('scanner-section').classList.remove('hidden');
+    document.getElementById('qr-reader').classList.add('hidden');
+    document.getElementById('verify-result').innerHTML = '';
+}
+
+// Iniciar escáner de QR
+function startScanner() {
+    const qrReader = document.getElementById('qr-reader');
+    const scannerSection = document.getElementById('scanner-section');
+    
+    qrReader.classList.remove('hidden');
+    scannerSection.classList.add('hidden');
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    isScanning = true;
+    
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 }
+    };
+    
+    html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+            // QR detectado
+            if (decodedText.startsWith('GF-')) {
+                stopScanner();
+                processScannedCode(decodedText);
+            }
+        },
+        (errorMessage) => {
+            // Error de escaneo (normal, ocurre continuamente)
+        }
+    ).catch((err) => {
+        alert('❌ No se pudo acceder a la cámara. Verifica los permisos.');
+        resetVerifyView();
+        isScanning = false;
+    });
+}
+
+// Detener escáner
+function stopScanner() {
+    if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+            isScanning = false;
+            document.getElementById('qr-reader').classList.add('hidden');
+        }).catch(err => {
+            console.error('Error al detener escáner:', err);
+        });
+    }
+}
+
+// Volver desde verificar
+function backFromVerify() {
+    stopScanner();
+    showView('menu');
+}
+
+// Procesar código escaneado
+function processScannedCode(code) {
+    loadVouchers();
+    const voucher = allVouchers.find(v => v.code === code);
+    
+    const resultDiv = document.getElementById('verify-result');
+    
+    if (!voucher) {
+        resultDiv.innerHTML = `
+            <div style="background: #fee2e2; border: 2px solid #dc2626; border-radius: 12px; padding: 20px; color: #991b1b; text-align: center;">
+                <div style="font-size: 48px;">❌</div>
+                <div style="font-weight: bold; margin: 10px 0;">Vale no encontrado</div>
+                <div>El código escaneado no existe: ${code}</div>
+            </div>
+            <button class="btn btn-success" onclick="startScanner()" style="margin-top: 15px;">
+                📷 Escanear Otro Vale
+            </button>
+        `;
+        return;
+    }
+    
+    const now = new Date();
+    const expiry = new Date(voucher.expiryDate);
+    const isExpired = now > expiry;
+    const isUsed = voucher.usedCount >= voucher.maxUses;
+    
+    let statusHtml = '';
+    let canUse = false;
+    
+    if (isExpired) {
+        statusHtml = `
+            <div style="background: #fee2e2; border: 2px solid #dc2626; border-radius: 12px; padding: 20px; color: #991b1b;">
+                <div style="font-size: 48px; text-align: center;">⏱️</div>
+                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE EXPIRADO</div>
+                <div style="text-align: center;">Este vale venció el ${formatDate(voucher.expiryDate)}</div>
+            </div>
+        `;
+    } else if (isUsed) {
+        statusHtml = `
+            <div style="background: #e2e8f0; border: 2px solid #64748b; border-radius: 12px; padding: 20px; color: #475569;">
+                <div style="font-size: 48px; text-align: center;">✓</div>
+                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE YA USADO</div>
+                <div style="text-align: center;">Se utilizaron todos los usos permitidos (${voucher.maxUses})</div>
+            </div>
+        `;
+    } else {
+        canUse = true;
+        statusHtml = `
+            <div style="background: #d1fae5; border: 2px solid #059669; border-radius: 12px; padding: 20px; color: #065f46;">
+                <div style="font-size: 48px; text-align: center;">✅</div>
+                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE DISPONIBLE</div>
+                <div style="text-align: center; font-size: 36px; font-weight: bold; color: #059669; margin: 10px 0;">
+                    S/ ${voucher.amount.toFixed(2)}
+                </div>
+            </div>
+        `;
+    }
+    
+    const infoHtml = `
+        <div style="margin-top: 20px; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px;">
+            <div style="margin: 8px 0;"><strong>Código:</strong> ${voucher.code}</div>
+            <div style="margin: 8px 0;"><strong>Cliente:</strong> ${voucher.customerName}</div>
+            <div style="margin: 8px 0;"><strong>Usos:</strong> ${voucher.usedCount}/${voucher.maxUses}</div>
+            <div style="margin: 8px 0;"><strong>Vence:</strong> ${formatDate(voucher.expiryDate)}</div>
+        </div>
+    `;
+    
+    const buttonHtml = canUse ? `
+        <button class="btn btn-success" onclick="applyVoucher('${voucher.code}')" style="margin-top: 15px;">
+            ✓ Aplicar Vale Ahora
+        </button>
+        <button class="btn btn-primary" onclick="startScanner()" style="margin-top: 10px;">
+            📷 Escanear Otro Vale
+        </button>
+    ` : `
+        <button class="btn btn-success" onclick="startScanner()" style="margin-top: 15px;">
+            📷 Escanear Otro Vale
+        </button>
+    `;
+    
+    resultDiv.innerHTML = statusHtml + infoHtml + buttonHtml;
 }
 
 // Crear vale
@@ -270,86 +425,6 @@ function copyToClipboard(text) {
     }
 }
 
-// Verificar vale
-function verifyVoucher() {
-    const code = document.getElementById('verify-code').value.trim().toUpperCase();
-    
-    if (!code) {
-        alert('⚠️ Por favor ingresa un código');
-        return;
-    }
-    
-    loadVouchers();
-    const voucher = allVouchers.find(v => v.code === code);
-    
-    const resultDiv = document.getElementById('verify-result');
-    
-    if (!voucher) {
-        resultDiv.innerHTML = `
-            <div style="background: #fee2e2; border: 2px solid #dc2626; border-radius: 12px; padding: 20px; color: #991b1b; text-align: center;">
-                <div style="font-size: 48px;">❌</div>
-                <div style="font-weight: bold; margin: 10px 0;">Vale no encontrado</div>
-                <div>El código no existe en el sistema</div>
-            </div>
-        `;
-        return;
-    }
-    
-    const now = new Date();
-    const expiry = new Date(voucher.expiryDate);
-    const isExpired = now > expiry;
-    const isUsed = voucher.usedCount >= voucher.maxUses;
-    
-    let statusHtml = '';
-    let canUse = false;
-    
-    if (isExpired) {
-        statusHtml = `
-            <div style="background: #fee2e2; border: 2px solid #dc2626; border-radius: 12px; padding: 20px; color: #991b1b;">
-                <div style="font-size: 48px; text-align: center;">⏱️</div>
-                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE EXPIRADO</div>
-                <div style="text-align: center;">Este vale venció el ${formatDate(voucher.expiryDate)}</div>
-            </div>
-        `;
-    } else if (isUsed) {
-        statusHtml = `
-            <div style="background: #e2e8f0; border: 2px solid #64748b; border-radius: 12px; padding: 20px; color: #475569;">
-                <div style="font-size: 48px; text-align: center;">✓</div>
-                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE YA USADO</div>
-                <div style="text-align: center;">Se utilizaron todos los usos permitidos (${voucher.maxUses})</div>
-            </div>
-        `;
-    } else {
-        canUse = true;
-        statusHtml = `
-            <div style="background: #d1fae5; border: 2px solid #059669; border-radius: 12px; padding: 20px; color: #065f46;">
-                <div style="font-size: 48px; text-align: center;">✅</div>
-                <div style="font-weight: bold; text-align: center; margin: 10px 0;">VALE DISPONIBLE</div>
-                <div style="text-align: center; font-size: 36px; font-weight: bold; color: #059669; margin: 10px 0;">
-                    S/ ${voucher.amount.toFixed(2)}
-                </div>
-            </div>
-        `;
-    }
-    
-    const infoHtml = `
-        <div style="margin-top: 20px; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px;">
-            <div style="margin: 8px 0;"><strong>Código:</strong> ${voucher.code}</div>
-            <div style="margin: 8px 0;"><strong>Cliente:</strong> ${voucher.customerName}</div>
-            <div style="margin: 8px 0;"><strong>Usos:</strong> ${voucher.usedCount}/${voucher.maxUses}</div>
-            <div style="margin: 8px 0;"><strong>Vence:</strong> ${formatDate(voucher.expiryDate)}</div>
-        </div>
-    `;
-    
-    const buttonHtml = canUse ? `
-        <button class="btn btn-success" onclick="applyVoucher('${voucher.code}')" style="margin-top: 15px;">
-            ✓ Aplicar Vale Ahora
-        </button>
-    ` : '';
-    
-    resultDiv.innerHTML = statusHtml + infoHtml + buttonHtml;
-}
-
 // Aplicar vale
 function applyVoucher(code) {
     loadVouchers();
@@ -375,9 +450,8 @@ function applyVoucher(code) {
     
     alert(`✅ ¡Vale aplicado exitosamente!\n\nMonto: S/ ${voucher.amount.toFixed(2)}\nUsos: ${voucher.usedCount}/${voucher.maxUses}`);
     
-    document.getElementById('verify-code').value = '';
-    verifyVoucher.code = code;
-    verifyVoucher();
+    // Volver a escanear
+    processScannedCode(code);
 }
 
 // Cargar lista de vales
