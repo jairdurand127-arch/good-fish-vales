@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Vales - Good Fish Cevichería">
+    <meta name="theme-color" content="#0891b2">
+    <title>Good Fish - Sistema de Vales</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #0891b2;
+            font-size: 28px;
+            margin: 10px 0;
+        }
+        
+        .header .emoji {
+            font-size: 48px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: #0891b2;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0e7490;
+            box-shadow: 0 5px 15px rgba(8, 145, 178, 0.4);
+        }
+        
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #047857;
+            box-shadow: 0 5px 15px rgba(5, 150, 105, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+        
+        .voucher-display {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 3px dashed #0891b2;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .voucher-code {
+            font-family: 'Courier New', monospace;
+            font-size: 36px;
+            font-weight: bold;
+            color: #0891b2;
+            letter-spacing: 3px;
+            margin: 20px 0;
+        }
+        
+        .voucher-amount {
+            font-size: 56px;
+            font-weight: bold;
+            color: #059669;
+            margin: 20px 0;
+        }
+        
+        .qr-container {
+            margin: 20px 0;
+        }
+        
+        .qr-container img {
+            max-width: 300px;
+            width: 100%;
+            height: auto;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-used {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .status-expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #0891b2;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .back-btn {
+            background: transparent;
+            color: #0891b2;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0891b2;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .btn-icon {
+            font-size: 24px;
+        }
+        
+        .install-prompt {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .install-prompt button {
+            background: white;
+            color: #0891b2;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Menú Principal -->
+        <div id="menu-view" class="card">
+            <div class="header">
+                <div class="emoji">🐟</div>
+                <h1>Good Fish Cevichería</h1>
+                <p style="color: #64748b;">Sistema de Vales</p>
+            </div>
+            
+            <button class="btn btn-primary" onclick="showView('create')">
+                <span>➕ Crear Vale</span>
+                <span>→</span>
+            </button>
+            
+            <button class="btn btn-success" onclick="showView('verify')">
+                <span>✓ Verificar Vale</span>
+                <span>→</span>
+            </button>
+            
+            <button class="btn btn-secondary" onclick="showView('list')">
+                <span>📋 Lista de Vales</span>
+                <span>→</span>
+            </button>
+            
+            <div class="info-box">
+                <strong>ℹ️ Información:</strong><br>
+                ✓ Vigencia: 1 mes<br>
+                ✓ Códigos únicos<br>
+                ✓ Control de usos<br>
+                ✓ Válidos solo en Good Fish
+            </div>
+        </div>
+        
+        <!-- Vista Crear Vale -->
+        <div id="create-view" class="card hidden">
+            <button class="back-btn" onclick="showView('menu')">← Volver</button>
+            <h2 style="color: #0891b2; margin-bottom: 20px;">Crear Nuevo Vale</h2>
+            
+            <div class="form-group">
+                <label>Nombre del Cliente</label>
+                <input type="text" id="customer-name" placeholder="Ej: Juan Pérez">
+            </div>
+            
+            <div class="form-group">
+                <label>Monto del Vale (S/)</label>
+                <input type="number" id="amount" placeholder="50.00" step="0.01" min="0">
+            </div>
+            
+            <div class="form-group">
+                <label>Número de Usos Permitidos</label>
+                <select id="max-uses">
+                    <option value="1">1 vez (Uso único)</option>
+                    <option value="2">2 veces</option>
+                    <option value="3">3 veces</option>
+                    <option value="4">4 veces</option>
+                    <option value="5">5 veces</option>
+                </select>
+            </div>
+            
+            <div class="info-box">
+                ⏱️ <strong>Vigencia:</strong> Este vale será válido por 1 mes desde su creación.
+            </div>
+            
+            <button class="btn btn-primary" onclick="createVoucher()">
+                Generar Vale con QR
+            </button>
+        </div>
+        
+        <!-- Vista Vale Creado -->
+        <div id="display-view" class="card hidden">
+            <button class="back-btn" onclick="showView('menu')">← Volver al menú</button>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 48px;">✅</div>
+                <h2 style="color: #059669;">¡Vale Creado!</h2>
+            </div>
+            
+            <div class="voucher-display">
+                <div style="font-weight: bold; color: #0891b2; font-size: 20px;">🐟 GOOD FISH CEVICHERÍA 🐟</div>
+                <div class="qr-container">
+                    <img id="qr-image" src="" alt="QR Code">
+                </div>
+                <div class="voucher-code" id="display-code"></div>
+                <div class="voucher-amount" id="display-amount"></div>
+                <div id="display-info" style="text-align: left; padding: 0 20px;"></div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="downloadVoucher()">
+                📥 Descargar Vale (PNG)
+            </button>
+            
+            <button class="btn btn-success" onclick="shareVoucher()">
+                📤 Compartir Vale
+            </button>
+        </div>
+        
+        <!-- Vista Verificar -->
+        <div id="verify-view" class="card hidden">
+            <button class="back-btn" onclick="showView('menu')">← Volver</button>
+            <h2 style="color: #0891b2; margin-bottom: 20px;">Verificar Vale</h2>
+            
+            <div style="text-align: center; padding: 40px 20px;">
+                <div style="font-size: 64px; margin-bottom: 20px;">📷</div>
+                <p style="color: #64748b; margin-bottom: 20px;">Ingresa el código del vale manualmente</p>
+                
+                <div class="form-group">
+                    <input type="text" id="verify-code" placeholder="GF-XXXXXX" style="text-align: center; text-transform: uppercase; font-family: monospace; font-size: 20px;">
+                </div>
+                
+                <button class="btn btn-success" onclick="verifyVoucher()">
+                    Verificar Vale
+                </button>
+                
+                <div id="verify-result" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <!-- Vista Lista -->
+        <div id="list-view" class="card hidden">
+            <button class="back-btn" onclick="showView('menu')">← Volver</button>
+            <h2 style="color: #0891b2; margin-bottom: 20px;">Lista de Vales</h2>
+            
+            <div class="stats-grid" id="stats-container"></div>
+            <div id="vouchers-container"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registrado'))
+                .catch(err => console.log('Error al registrar SW', err));
+        }
+    </script>
+</body>
+</html>
