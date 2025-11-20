@@ -11,6 +11,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
     
+    <!-- Librería para escanear QR -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -242,24 +245,21 @@
             font-size: 24px;
         }
         
-        .install-prompt {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            text-align: center;
+        #qr-reader {
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 20px 0;
         }
         
-        .install-prompt button {
-            background: white;
-            color: #0891b2;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: bold;
-            margin-top: 10px;
-            cursor: pointer;
+        #qr-reader video {
+            border-radius: 12px;
+        }
+        
+        .scanner-container {
+            background: #000;
+            border-radius: 12px;
+            padding: 10px;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -361,23 +361,23 @@
         
         <!-- Vista Verificar -->
         <div id="verify-view" class="card hidden">
-            <button class="back-btn" onclick="showView('menu')">← Volver</button>
+            <button class="back-btn" onclick="backFromVerify()">← Volver</button>
             <h2 style="color: #0891b2; margin-bottom: 20px;">Verificar Vale</h2>
             
-            <div style="text-align: center; padding: 40px 20px;">
-                <div style="font-size: 64px; margin-bottom: 20px;">📷</div>
-                <p style="color: #64748b; margin-bottom: 20px;">Ingresa el código del vale manualmente</p>
-                
-                <div class="form-group">
-                    <input type="text" id="verify-code" placeholder="GF-XXXXXX" style="text-align: center; text-transform: uppercase; font-family: monospace; font-size: 20px;">
+            <div id="scanner-section">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">📷</div>
+                    <p style="color: #64748b; margin-bottom: 20px;">Escanea el código QR del vale</p>
+                    
+                    <button class="btn btn-success" onclick="startScanner()">
+                        📷 Activar Cámara
+                    </button>
                 </div>
-                
-                <button class="btn btn-success" onclick="verifyVoucher()">
-                    Verificar Vale
-                </button>
-                
-                <div id="verify-result" style="margin-top: 20px;"></div>
             </div>
+            
+            <div id="qr-reader" class="hidden"></div>
+            
+            <div id="verify-result" style="margin-top: 20px;"></div>
         </div>
         
         <!-- Vista Lista -->
